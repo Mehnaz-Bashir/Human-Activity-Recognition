@@ -30,8 +30,21 @@ FEATURE_PATH = os.path.join(BASE_DIR, "..", "models", "feature_names.pkl")
 st.write("Model exists:", os.path.exists(MODEL_PATH))
 st.write("Feature exists:", os.path.exists(FEATURE_PATH))
 
-model = joblib.load(MODEL_PATH)
-feature_names = joblib.load(FEATURE_PATH)
+# model = joblib.load(MODEL_PATH)
+# feature_names = joblib.load(FEATURE_PATH)
+st.write("BASE_DIR:", BASE_DIR)
+st.write("Current folder:", os.listdir(BASE_DIR))
+
+parent = os.path.join(BASE_DIR, "..")
+st.write("Parent folder:", os.listdir(parent))
+
+models = os.path.join(parent, "models")
+st.write("Models folder path:", models)
+st.write("Models exists:", os.path.exists(models))
+
+if os.path.exists(models):
+    st.write("Files in models:", os.listdir(models))
+
 
 activity_map = {
     1: "WALKING",
