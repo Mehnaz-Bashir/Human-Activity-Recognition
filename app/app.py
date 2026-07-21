@@ -4,8 +4,7 @@
   "metadata": {
     "colab": {
       "provenance": [],
-      "authorship_tag": "ABX9TyMjk66YKmA3lwyylCjU4akJ",
-      "include_colab_link": true
+      "authorship_tag": "ABX9TyMjk66YKmA3lwyylCjU4akJ"
     },
     "kernelspec": {
       "name": "python3",
