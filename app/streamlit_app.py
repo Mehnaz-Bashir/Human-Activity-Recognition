@@ -1,49 +1,103 @@
-import streamlit as st
-import pandas as pd
+import os
 import joblib
+import pandas as pd
 import matplotlib.pyplot as plt
+import streamlit as st
 
-# -----------------------------
-# Page Configuration
-# -----------------------------
+# =========================================================
+# PAGE CONFIG
+# =========================================================
 st.set_page_config(
     page_title="Human Activity Recognition",
     page_icon="🏃",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# -----------------------------
-# Load Model
-# -----------------------------
-# -----------------------------
-# Load Model
-# -----------------------------
-import os
+# =========================================================
+# CUSTOM CSS (yeh sab sirf look & feel ke liye hai)
+# =========================================================
+st.markdown("""
+<style>
+    .main-header {
+        background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+        padding: 2rem 1.5rem;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 1.5rem;
+    }
+    .main-header h1 {
+        margin: 0;
+        font-size: 2.2rem;
+    }
+    .main-header p {
+        margin: 0.3rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1rem;
+    }
+    div[data-testid="stMetric"] {
+        background-color: #f8f9fb;
+        border: 1px solid #eaeaea;
+        border-radius: 12px;
+        padding: 10px 15px;
+    }
+    .stButton>button {
+        background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.6rem 1.4rem;
+        font-weight: 600;
+    }
+    .stButton>button:hover {
+        opacity: 0.9;
+        color: white;
+    }
+    section[data-testid="stSidebar"] {
+        background-color: #0f172a;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #f1f5f9 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
+# =========================================================
+# ROBUST MODEL LOADING
+# Deployment ke time folder structure alag ho sakta hai
+# (e.g. models/ app ke saath hi ho, ya ek level upar).
+# Isliye multiple possible locations check karte hain.
+# =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MODELS_DIR = os.path.join(BASE_DIR, "..", "models")
+POSSIBLE_MODEL_DIRS = [
+    os.path.join(BASE_DIR, "models"),
+    os.path.join(BASE_DIR, "..", "models"),
+    os.path.join(BASE_DIR, "model"),
+    BASE_DIR,
+]
 
-st.write("BASE_DIR:", BASE_DIR)
-st.write("Models folder:", MODELS_DIR)
+@st.cache_resource(show_spinner=False)
+def load_model_and_features():
+    for folder in POSSIBLE_MODEL_DIRS:
+        model_path = os.path.join(folder, "best_har_model.pkl")
+        feature_path = os.path.join(folder, "feature_names.pkl")
+        if os.path.exists(model_path) and os.path.exists(feature_path):
+            model = joblib.load(model_path)
+            feature_names = joblib.load(feature_path)
+            return model, feature_names, folder
+    return None, None, None
 
-if os.path.exists(MODELS_DIR):
-    st.write("Files in models:", os.listdir(MODELS_DIR))
-else:
-    st.error("Models folder not found!")
+with st.spinner("Loading model..."):
+    model, feature_names, found_dir = load_model_and_features()
 
-MODEL_PATH = os.path.join(MODELS_DIR, "best_har_model.pkl")
-FEATURE_PATH = os.path.join(MODELS_DIR, "feature_names.pkl")
-
-st.write("Model exists:", os.path.exists(MODEL_PATH))
-st.write("Feature exists:", os.path.exists(FEATURE_PATH))
-
-# Load model only if both files exist
-if os.path.exists(MODEL_PATH) and os.path.exists(FEATURE_PATH):
-    model = joblib.load(MODEL_PATH)
-    feature_names = joblib.load(FEATURE_PATH)
-    st.success("✅ Model Loaded Successfully!")
-else:
+if model is None:
+    st.error(
+        "❌ Model files nahi mile (best_har_model.pkl / feature_names.pkl).\n\n"
+        "Checked these folders:\n" + "\n".join(f"- {p}" for p in POSSIBLE_MODEL_DIRS) +
+        "\n\nMake sure `models/` folder repo mein app.py ke sahi relative path par committed ho "
+        "(Git LFS use kiya hai to Streamlit Cloud LFS files auto-pull nahi karta — normal upload use karo)."
+    )
     st.stop()
 
 activity_map = {
@@ -55,155 +109,149 @@ activity_map = {
     6: "LAYING"
 }
 
-# -----------------------------
-# Sidebar
-# -----------------------------
-st.sidebar.title("🏃 HAR Dashboard")
+ACTIVITY_ICONS = {
+    "WALKING": "🚶",
+    "WALKING_UPSTAIRS": "⬆️",
+    "WALKING_DOWNSTAIRS": "⬇️",
+    "SITTING": "🪑",
+    "STANDING": "🧍",
+    "LAYING": "🛌",
+}
 
-st.sidebar.success("Model Loaded Successfully")
+# =========================================================
+# SIDEBAR
+# =========================================================
+with st.sidebar:
+    st.title("🏃 HAR Dashboard")
+    st.success("✅ Model Loaded")
+    st.caption(f"Loaded from: `{os.path.relpath(found_dir, BASE_DIR) or '.'}`")
 
-st.sidebar.metric(
-    label="Model Accuracy",
-    value="98.59%"
-)
+    st.metric(label="Model Accuracy", value="98.59%")
 
-st.sidebar.markdown("---")
+    st.markdown("---")
+    st.write("### Activity Classes")
+    for value in activity_map.values():
+        st.write(f"{ACTIVITY_ICONS.get(value, '✅')} {value}")
 
-st.sidebar.write("### Activity Classes")
+    st.markdown("---")
+    st.info(
+        "**Developer:** Mehnaz Bashir\n\n"
+        "**Program:** MCA\n\n"
+        "**Institute:** Lovely Professional University"
+    )
 
-for value in activity_map.values():
-    st.sidebar.write("✅", value)
+# =========================================================
+# HEADER
+# =========================================================
+st.markdown("""
+<div class="main-header">
+    <h1>🏃 Human Activity Recognition</h1>
+    <p>Predict human activities (walking, sitting, standing, laying, etc.) from smartphone accelerometer & gyroscope sensor data.</p>
+</div>
+""", unsafe_allow_html=True)
 
-st.sidebar.markdown("---")
-
-st.sidebar.info(
-"""
-Developer:
-Mehnaz Bashir
-
-MCA
-
-Lovely Professional University
-"""
-)
-
-# -----------------------------
-# Main Title
-# -----------------------------
-st.title("🏃 Human Activity Recognition")
-
-st.write(
-"""
-Predict Human Activities using Smartphone Sensor Data.
-"""
-)
-
-st.markdown("---")
-
-# -----------------------------
-# Upload CSV
-# -----------------------------
+# =========================================================
+# FILE UPLOAD
+# =========================================================
+st.subheader("📂 Upload Sensor Data")
 uploaded_file = st.file_uploader(
-    "📂 Upload Sensor CSV",
+    "Upload a CSV file with the same feature columns used during training",
     type="csv"
 )
 
 if uploaded_file is not None:
+    try:
+        data = pd.read_csv(uploaded_file)
+    except Exception as e:
+        st.error(f"⚠️ Could not read the CSV file: {e}")
+        st.stop()
 
-    data = pd.read_csv(uploaded_file)
+    st.success("File uploaded successfully!")
 
-    st.success("File Uploaded Successfully!")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Rows", data.shape[0])
+    c2.metric("Columns", data.shape[1])
+    c3.metric("Required Features", len(feature_names))
 
-    st.subheader("Dataset Preview")
+    with st.expander("🔍 Preview Dataset", expanded=True):
+        st.dataframe(data.head(), use_container_width=True)
 
-    st.dataframe(data.head())
+    # ---------------------------------------------------
+    # Validate that required columns exist
+    # ---------------------------------------------------
+    missing_cols = [f for f in feature_names if f not in data.columns]
 
-    st.write("Rows :", data.shape[0])
-    st.write("Columns :", data.shape[1])
+    if missing_cols:
+        st.error(
+            f"⚠️ Uploaded file is missing {len(missing_cols)} required feature column(s). "
+            "Prediction can't run until the CSV matches the model's expected columns."
+        )
+        with st.expander("See missing columns"):
+            st.write(missing_cols)
+        st.stop()
 
-    # -----------------------------
-    # Predict Button
-    # -----------------------------
+    st.markdown("---")
 
-    if st.button("🚀 Predict Activities"):
+    if st.button("🚀 Predict Activities", use_container_width=True):
+        with st.spinner("Running predictions..."):
+            model_input = data[feature_names]
+            predictions = model.predict(model_input)
+            predicted_labels = [activity_map.get(p, str(p)) for p in predictions]
 
-        data = data[feature_names]
+            result = data.copy()
+            result["Predicted Activity"] = predicted_labels
 
-        predictions = model.predict(data)
+        st.success("✅ Prediction Completed!")
 
-        predicted_labels = [
-            activity_map[p]
-            for p in predictions
-        ]
+        st.subheader("📊 Prediction Results")
+        st.dataframe(result, use_container_width=True)
 
-        data["Predicted Activity"] = predicted_labels
-
-        st.success("Prediction Completed!")
-
-        # -----------------------------
-        # Prediction Results
-        # -----------------------------
-
-        st.subheader("Prediction Results")
-
-        st.dataframe(data)
-
-        # -----------------------------
+        # -----------------------------------------------
         # Summary
-        # -----------------------------
+        # -----------------------------------------------
+        st.subheader("📈 Prediction Summary")
 
-        st.subheader("Prediction Summary")
+        summary = result["Predicted Activity"].value_counts()
 
-        summary = data["Predicted Activity"].value_counts()
-
-        st.dataframe(summary)
-
-        # -----------------------------
-        # Charts
-        # -----------------------------
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-
-            fig, ax = plt.subplots(figsize=(6,4))
-
-            summary.plot(
-                kind="bar",
-                ax=ax
+        summary_cols = st.columns(len(summary))
+        for col, (activity, count) in zip(summary_cols, summary.items()):
+            col.metric(
+                label=f"{ACTIVITY_ICONS.get(activity, '')} {activity}",
+                value=int(count)
             )
 
+        # -----------------------------------------------
+        # Charts
+        # -----------------------------------------------
+        chart_col1, chart_col2 = st.columns(2)
+
+        with chart_col1:
+            fig, ax = plt.subplots(figsize=(6, 4))
+            summary.plot(kind="bar", ax=ax, color="#2575fc")
             ax.set_title("Activity Distribution")
-
             ax.set_ylabel("Count")
-
+            ax.spines[["top", "right"]].set_visible(False)
+            plt.xticks(rotation=30, ha="right")
             st.pyplot(fig)
 
-        with col2:
-
-            fig2, ax2 = plt.subplots(figsize=(6,6))
-
-            summary.plot(
-                kind="pie",
-                autopct="%1.1f%%",
-                ax=ax2
-            )
-
+        with chart_col2:
+            fig2, ax2 = plt.subplots(figsize=(6, 6))
+            colors = plt.cm.cool_r(range(0, 256, max(1, 256 // len(summary))))
+            summary.plot(kind="pie", autopct="%1.1f%%", ax=ax2, colors=colors)
             ax2.set_ylabel("")
-
             ax2.set_title("Activity Percentage")
-
             st.pyplot(fig2)
 
-        # -----------------------------
+        # -----------------------------------------------
         # Download
-        # -----------------------------
-
-        csv = data.to_csv(index=False).encode("utf-8")
-
+        # -----------------------------------------------
+        csv = result.to_csv(index=False).encode("utf-8")
         st.download_button(
-            label="⬇ Download Predictions",
+            label="⬇️ Download Predictions",
             data=csv,
             file_name="predictions.csv",
-            mime="text/csv"
+            mime="text/csv",
+            use_container_width=True
         )
+else:
+    st.info("👆 Upload a CSV file to get started.")
