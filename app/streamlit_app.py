@@ -15,36 +15,36 @@ st.set_page_config(
 # -----------------------------
 # Load Model
 # -----------------------------
+# -----------------------------
+# Load Model
+# -----------------------------
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-st.write("Current Directory:", BASE_DIR)
-st.write("Files here:", os.listdir(BASE_DIR))
-st.write("Parent:", os.listdir(os.path.join(BASE_DIR, "..")))
-st.write("Models:", os.listdir(os.path.join(BASE_DIR, "..", "models")))
+MODELS_DIR = os.path.join(BASE_DIR, "..", "models")
 
-MODEL_PATH = os.path.join(BASE_DIR, "..", "models", "best_har_model.pkl")
-FEATURE_PATH = os.path.join(BASE_DIR, "..", "models", "feature_names.pkl")
+st.write("BASE_DIR:", BASE_DIR)
+st.write("Models folder:", MODELS_DIR)
+
+if os.path.exists(MODELS_DIR):
+    st.write("Files in models:", os.listdir(MODELS_DIR))
+else:
+    st.error("Models folder not found!")
+
+MODEL_PATH = os.path.join(MODELS_DIR, "best_har_model.pkl")
+FEATURE_PATH = os.path.join(MODELS_DIR, "feature_names.pkl")
 
 st.write("Model exists:", os.path.exists(MODEL_PATH))
 st.write("Feature exists:", os.path.exists(FEATURE_PATH))
 
-# model = joblib.load(MODEL_PATH)
-# feature_names = joblib.load(FEATURE_PATH)
-st.write("BASE_DIR:", BASE_DIR)
-st.write("Current folder:", os.listdir(BASE_DIR))
-
-parent = os.path.join(BASE_DIR, "..")
-st.write("Parent folder:", os.listdir(parent))
-
-models = os.path.join(parent, "models")
-st.write("Models folder path:", models)
-st.write("Models exists:", os.path.exists(models))
-
-if os.path.exists(models):
-    st.write("Files in models:", os.listdir(models))
-
+# Load model only if both files exist
+if os.path.exists(MODEL_PATH) and os.path.exists(FEATURE_PATH):
+    model = joblib.load(MODEL_PATH)
+    feature_names = joblib.load(FEATURE_PATH)
+    st.success("✅ Model Loaded Successfully!")
+else:
+    st.stop()
 
 activity_map = {
     1: "WALKING",
